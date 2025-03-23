@@ -86,12 +86,12 @@ struct ContentView: View {
     func inspectIPA(at url: URL) {
         let fileManager = FileManager.default
         let tempDir = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        
+
         DispatchQueue.main.async {
             errorMessage = nil
             ipaInfoSections = []
         }
-        
+
         do {
             try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
             let unzipTask = Process()
@@ -99,18 +99,29 @@ struct ContentView: View {
             unzipTask.arguments = [url.path, "-d", tempDir.path]
             try unzipTask.run()
             unzipTask.waitUntilExit()
-            
-            let appPaths = try fileManager.contentsOfDirectory(atPath: tempDir.appendingPathComponent("Payload").path)
+
+            let payloadURL = tempDir.appendingPathComponent("Payload")
+            let appPaths = try fileManager.contentsOfDirectory(atPath: payloadURL.path)
             guard let appName = appPaths.first(where: { $0.hasSuffix(".app") }) else {
-                DispatchQueue.main.async {
-                    errorMessage = "Could not find .app bundle inside the .ipa"
-                }
+                DispatchQueue.main.async { errorMessage = "Could not find .app bundle inside the .ipa" }
                 return
             }
-            
-            let appURL = tempDir.appendingPathComponent("Payload/" + appName)
+
+            let appURL = payloadURL.appendingPathComponent(appName)
+            let infoPlistURL = appURL.appendingPathComponent("Info.plist")
+
+            if let plistData = try? Data(contentsOf: infoPlistURL),
+               let plist = try PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+               let bundleVersion = plist["CFBundleShortVersionString"] as? String,
+               let buildNumber = plist["CFBundleVersion"] as? String {
+                
+                DispatchQueue.main.async {
+                    ipaInfoSections.append(("App Version", "Version: \(bundleVersion) (Build \(buildNumber))", nil))
+                }
+            }
+
             let embeddedProfile = appURL.appendingPathComponent("embedded.mobileprovision")
-            
+
             if fileManager.fileExists(atPath: embeddedProfile.path) {
                 let decodeTask = Process()
                 let pipe = Pipe()
@@ -119,25 +130,22 @@ struct ContentView: View {
                 decodeTask.standardOutput = pipe
                 try decodeTask.run()
                 decodeTask.waitUntilExit()
-                
+
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 if let output = String(data: data, encoding: .utf8) {
                     let formattedSections = formatProvisioningProfile(output)
                     DispatchQueue.main.async {
-                        ipaInfoSections = formattedSections
+                        ipaInfoSections.append(contentsOf: formattedSections)
                     }
                 }
             } else {
-                DispatchQueue.main.async {
-                    errorMessage = "No embedded.mobileprovision found."
-                }
+                DispatchQueue.main.async { errorMessage = "No embedded.mobileprovision found." }
             }
         } catch {
-            DispatchQueue.main.async {
-                errorMessage = "Failed to inspect .ipa: \(error.localizedDescription)"
-            }
+            DispatchQueue.main.async { errorMessage = "Failed to inspect .ipa: \(error.localizedDescription)" }
         }
     }
+
     
     func extractDate(forKey key: String, from xml: String, using formatter: ISO8601DateFormatter) -> Date? {
         guard let keyRange = xml.range(of: "<key>\(key)</key>") else { return nil }
