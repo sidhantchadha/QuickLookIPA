@@ -1,12 +1,12 @@
 # QuickLookIPA
 
-QuickLookIPA is a handy macOS Quick Look plugin that enables you to preview `.ipa` files directly from Finder, simplifying the workflow for iOS developers and testers.
+QuickLookIPA is a simple macOS app that allows you to quickly preview `.ipa` files, simplifying workflows for iOS developers and testers by providing easy access to essential app details.
 
 ## Features
 
-- Quick Look integration for `.ipa` files
-- Preview app icons, metadata, and essential details
-- Improve efficiency by eliminating the need to open external tools
+- Quick preview of `.ipa` files
+- View app icons, metadata, and essential information
+- Enhance productivity without relying on external tools
 
 ## Installation
 
@@ -20,25 +20,16 @@ git clone https://github.com/sidhantchadha/QuickLookIPA.git
 
 ```bash
 cd QuickLookIPA
-xcodebuild
+xcodebuild -configuration Release
 ```
 
-3. **Copy the generated plugin to the QuickLook folder:**
+3. **Open the generated app:**
 
-```bash
-cp -r build/Release/QuickLookIPA.qlgenerator ~/Library/QuickLook/
-```
-
-4. **Refresh Quick Look:**
-
-```bash
-qlmanage -r
-qlmanage -r cache
-```
+Find the generated `QuickLookIPA.app` in the `build/Release` folder and double-click to launch.
 
 ## Usage
 
-Once installed, simply select any `.ipa` file in Finder and hit the **spacebar** to preview app details.
+Launch QuickLookIPA, then drag-and-drop `.ipa` files onto the app window to preview app details instantly.
 
 ## Compatibility
 
