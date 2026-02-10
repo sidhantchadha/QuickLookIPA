@@ -111,12 +111,21 @@ struct ContentView: View {
             let infoPlistURL = appURL.appendingPathComponent("Info.plist")
 
             if let plistData = try? Data(contentsOf: infoPlistURL),
-               let plist = try PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
-               let bundleVersion = plist["CFBundleShortVersionString"] as? String,
-               let buildNumber = plist["CFBundleVersion"] as? String {
-                
-                DispatchQueue.main.async {
-                    ipaInfoSections.append(("App Version", "Version: \(bundleVersion) (Build \(buildNumber))", nil))
+               let plist = try PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any] {
+
+                // Extract version info
+                if let bundleVersion = plist["CFBundleShortVersionString"] as? String,
+                   let buildNumber = plist["CFBundleVersion"] as? String {
+                    DispatchQueue.main.async {
+                        ipaInfoSections.append(("App Version", "Version: \(bundleVersion) (Build \(buildNumber))", nil))
+                    }
+                }
+
+                // Extract bundle ID
+                if let bundleID = plist["CFBundleIdentifier"] as? String {
+                    DispatchQueue.main.async {
+                        ipaInfoSections.append(("Bundle ID (Info.plist)", bundleID, nil))
+                    }
                 }
             }
 
@@ -161,8 +170,8 @@ struct ContentView: View {
     
     func formatProvisioningProfile(_ rawXML: String) -> [(title: String, content: String, isWarning: Bool?)] {
         var sections: [(String, String, Bool?)] = []
-        let keys = ["Name", "AppIDName", "TeamName", "UUID"]
-        
+        let keys = ["Name", "AppIDName", "application-identifier", "TeamName", "UUID"]
+
         for key in keys {
             if let keyRange = rawXML.range(of: "<key>\(key)</key>") {
                 let rest = rawXML[keyRange.upperBound...]
@@ -171,7 +180,10 @@ struct ContentView: View {
                         .replacingOccurrences(of: "<string>", with: "")
                         .replacingOccurrences(of: "</string>", with: "")
                         .trimmingCharacters(in: .whitespacesAndNewlines)
-                    sections.append((key, value, nil))
+
+                    // Format the display label for better readability
+                    let displayKey = key == "application-identifier" ? "Application Identifier (Provisioning Profile)" : key
+                    sections.append((displayKey, value, nil))
                 }
             }
         }
