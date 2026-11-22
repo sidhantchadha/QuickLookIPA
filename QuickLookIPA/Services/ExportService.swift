@@ -304,7 +304,6 @@ class ExportService {
                         try self.export(ipaInfo, format: format, to: url)
                         DispatchQueue.main.async { completion(true) }
                     } catch {
-                        print("Export failed: \(error)")
                         DispatchQueue.main.async { completion(false) }
                     }
                 }

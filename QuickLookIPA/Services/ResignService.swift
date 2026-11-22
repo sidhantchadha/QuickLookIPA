@@ -311,7 +311,7 @@ class ResignService {
                 return certificates
             }
         } catch {
-            print("Failed to get certificates: \(error)")
+            // Certificate enumeration failed
         }
 
         return []

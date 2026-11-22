@@ -29,7 +29,7 @@ class HistoryManager: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true, attributes: nil)
         } catch {
-            print("Error creating app directory: \(error.localizedDescription)")
+            // Directory creation failed, will use default location
         }
 
         historyFileURL = appDirectory.appendingPathComponent("history.json")
@@ -92,16 +92,7 @@ class HistoryManager: ObservableObject {
                 let data = try encoder.encode(inspections)
                 try data.write(to: self.historyFileURL, options: .atomic)
             } catch {
-                print("Failed to save history: \(error.localizedDescription)")
-                // If encoding fails, try to log more details
-                if let encodingError = error as? EncodingError {
-                    switch encodingError {
-                    case .invalidValue(let value, let context):
-                        print("Invalid value \(value) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                    default:
-                        print("Encoding error: \(encodingError)")
-                    }
-                }
+                // History save failed - will retry on next change
             }
         }
     }
@@ -115,10 +106,7 @@ class HistoryManager: ObservableObject {
                 let data = try Data(contentsOf: self.historyFileURL)
 
                 // Check if data is empty
-                guard !data.isEmpty else {
-                    print("History file is empty")
-                    return
-                }
+                guard !data.isEmpty else { return }
 
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
@@ -130,27 +118,8 @@ class HistoryManager: ObservableObject {
                     self.recentInspections = loadedInspections
                 }
             } catch {
-                print("Failed to load history: \(error.localizedDescription)")
-                // If decoding fails, try to log more details
-                if let decodingError = error as? DecodingError {
-                    switch decodingError {
-                    case .dataCorrupted(let context):
-                        print("Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                        print("Debug description: \(context.debugDescription)")
-                    case .keyNotFound(let key, let context):
-                        print("Key '\(key.stringValue)' not found at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                    case .typeMismatch(let type, let context):
-                        print("Type mismatch for \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                    case .valueNotFound(let type, let context):
-                        print("Value of type \(type) not found at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                    @unknown default:
-                        print("Unknown decoding error: \(decodingError)")
-                    }
-
-                    // If corrupted, delete the file and start fresh
-                    try? FileManager.default.removeItem(at: self.historyFileURL)
-                    print("Corrupted history file deleted. Starting with empty history.")
-                }
+                // History corrupted - delete and start fresh
+                try? FileManager.default.removeItem(at: self.historyFileURL)
             }
         }
     }
