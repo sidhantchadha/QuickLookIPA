@@ -16,6 +16,9 @@ on:
           - prerelease
           - release
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build QuickLookIPA
@@ -201,15 +204,15 @@ jobs:
 
     - name: Create GitHub Release
       if: github.ref_type == 'tag'
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: ./artifacts/*
         body_path: release_notes.md
         draft: ${{ github.event.inputs.release_type == 'draft' || github.event.inputs.release_type == '' }}
         prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
         generate_release_notes: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        fail_on_unmatched_files: true
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Release Summary
       if: github.ref_type == 'tag'
