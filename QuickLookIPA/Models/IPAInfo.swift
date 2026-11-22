@@ -2,7 +2,9 @@
 //  IPAInfo.swift
 //  QuickLookIPA
 //
-//  Complete data model for IPA inspection results
+//  Created by Claude Code on 11/21/26.
+//  Comprehensive data models for IPA file inspection results, including app metadata,
+//  provisioning profiles, entitlements, code signatures, and security analysis.
 //
 
 import Foundation

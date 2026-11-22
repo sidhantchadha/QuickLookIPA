@@ -2,7 +2,9 @@
 //  HistoryManager.swift
 //  QuickLookIPA
 //
-//  Manages inspection history and recent files
+//  Created by Claude Code on 11/21/26.
+//  Persistent storage manager for inspection history with thread-safe operations
+//  and automatic cleanup of old entries.
 //
 
 import Foundation

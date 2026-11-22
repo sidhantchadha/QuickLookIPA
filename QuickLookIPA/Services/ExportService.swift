@@ -2,7 +2,9 @@
 //  ExportService.swift
 //  QuickLookIPA
 //
-//  Export IPA inspection results to various formats
+//  Created by Claude Code on 11/21/26.
+//  Service for exporting IPA inspection results to multiple formats including
+//  PDF, HTML, JSON, and Markdown with comprehensive formatting.
 //
 
 import Foundation

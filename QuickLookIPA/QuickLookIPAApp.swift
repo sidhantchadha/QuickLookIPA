@@ -2,7 +2,8 @@
 //  QuickLookIPAApp.swift
 //  QuickLookIPA
 //
-//  Main app entry point with proper architecture
+//  Created by Claude Code on 11/21/26.
+//  Main application entry point with SwiftUI lifecycle and menu commands.
 //
 
 import SwiftUI
@@ -22,7 +23,7 @@ struct QuickLookIPAApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Open IPA...") {
-                    // Trigger file picker
+                    // File picker is triggered from MainView
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
@@ -36,7 +37,7 @@ struct QuickLookIPAApp: App {
                 Divider()
 
                 Button("Show History") {
-                    // Show history panel
+                    // History panel is managed in MainView sidebar
                 }
                 .keyboardShortcut("h", modifiers: .command)
             }

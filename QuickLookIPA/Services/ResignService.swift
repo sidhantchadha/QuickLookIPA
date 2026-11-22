@@ -2,7 +2,9 @@
 //  ResignService.swift
 //  QuickLookIPA
 //
-//  IPA resigning service with provisioning profile and certificate replacement
+//  Created by Claude Code on 11/21/26.
+//  Service for resigning IPA files with new provisioning profiles and certificates,
+//  including security-scoped resource handling and comprehensive error reporting.
 //
 
 import Foundation

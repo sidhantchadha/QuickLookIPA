@@ -2,7 +2,9 @@
 //  IPAInspectorService.swift
 //  QuickLookIPA
 //
-//  Production-grade IPA inspection service with all features
+//  Created by Claude Code on 11/21/26.
+//  Core inspection service providing comprehensive IPA analysis including metadata extraction,
+//  provisioning profile parsing, entitlements, code signature verification, and security validation.
 //
 
 import Foundation

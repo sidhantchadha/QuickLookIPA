@@ -2,7 +2,9 @@
 //  MainView.swift
 //  QuickLookIPA
 //
-//  Complete UI revamp with modern design
+//  Created by Claude Code on 11/21/26.
+//  Main application view providing the complete user interface including inspection display,
+//  history management, comparison tools, export options, and file management.
 //
 
 import SwiftUI

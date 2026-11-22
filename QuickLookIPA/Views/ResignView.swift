@@ -2,7 +2,9 @@
 //  ResignView.swift
 //  QuickLookIPA
 //
-//  IPA Resign interface
+//  Created by Claude Code on 11/21/26.
+//  User interface for IPA resigning workflow including provisioning profile selection,
+//  certificate management, bundle identifier modification, and progress tracking.
 //
 
 import SwiftUI
