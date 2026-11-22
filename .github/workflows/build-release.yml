@@ -1,0 +1,223 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+          - draft
+          - prerelease
+          - release
+
+jobs:
+  build:
+    name: Build QuickLookIPA
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+
+    - name: Show Xcode and Swift versions
+      run: |
+        xcodebuild -version
+        swift --version
+
+    - name: Cache derived data
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-${{ hashFiles('**/*.xcodeproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-
+
+    - name: Build QuickLookIPA
+      run: |
+        xcodebuild clean build \
+          -project QuickLookIPA.xcodeproj \
+          -scheme QuickLookIPA \
+          -configuration Release \
+          -derivedDataPath ./build \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
+
+    - name: Locate built app
+      run: |
+        echo "Finding QuickLookIPA.app..."
+        find ./build -name "QuickLookIPA.app" -type d
+
+    - name: Create app bundle
+      run: |
+        # Find the app
+        APP_PATH=$(find ./build -name "QuickLookIPA.app" -type d | head -1)
+
+        if [ -z "$APP_PATH" ]; then
+          echo "Error: QuickLookIPA.app not found!"
+          exit 1
+        fi
+
+        echo "Found app at: $APP_PATH"
+
+        # Get version from tag or use default
+        if [ "${{ github.ref_type }}" == "tag" ]; then
+          VERSION="${{ github.ref_name }}"
+        else
+          VERSION="v1.1.0"
+        fi
+
+        # Create artifacts directory
+        mkdir -p ./artifacts
+
+        # Create DMG (simple method using hdiutil)
+        echo "Creating DMG..."
+        DMG_NAME="QuickLookIPA-${VERSION}-macOS.dmg"
+
+        # Create temporary directory for DMG contents
+        mkdir -p ./dmg-temp
+        cp -R "$APP_PATH" ./dmg-temp/
+
+        # Create symlink to Applications
+        ln -s /Applications ./dmg-temp/Applications
+
+        # Create DMG
+        hdiutil create -volname "QuickLookIPA ${VERSION}" \
+          -srcfolder ./dmg-temp \
+          -ov -format UDZO \
+          "./artifacts/${DMG_NAME}"
+
+        # Also create ZIP for direct download
+        echo "Creating ZIP..."
+        ZIP_NAME="QuickLookIPA-${VERSION}-macOS.zip"
+        cd $(dirname "$APP_PATH")
+        zip -r -y "$GITHUB_WORKSPACE/artifacts/${ZIP_NAME}" "$(basename "$APP_PATH")"
+        cd "$GITHUB_WORKSPACE"
+
+        # Create checksum file
+        cd ./artifacts
+        shasum -a 256 "${DMG_NAME}" > "${DMG_NAME}.sha256"
+        shasum -a 256 "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+        cd ..
+
+        echo "Build artifacts created:"
+        ls -lh ./artifacts/
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: QuickLookIPA-macOS
+        path: ./artifacts/*
+        retention-days: 30
+
+    - name: Create Release Notes
+      if: github.ref_type == 'tag'
+      run: |
+        cat > release_notes.md << 'EOF'
+        ## QuickLookIPA ${{ github.ref_name }}
+
+        A comprehensive macOS application for inspecting, analyzing, and resigning iOS IPA files.
+
+        ### Features
+
+        - 🔍 Deep IPA inspection with metadata extraction
+        - 🔐 Provisioning profile and entitlements analysis
+        - ✍️ IPA resigning with certificate management
+        - 📊 Export to JSON, Markdown, Text, and PDF
+        - 📜 Persistent inspection history
+        - 🔄 Side-by-side IPA comparison
+        - 🎨 Native SwiftUI interface with dark mode
+
+        ### Installation
+
+        **Option 1: DMG (Recommended)**
+        1. Download `QuickLookIPA-${{ github.ref_name }}-macOS.dmg`
+        2. Open the DMG file
+        3. Drag QuickLookIPA.app to Applications folder
+        4. Launch from Applications
+        5. If macOS blocks the app, go to System Settings → Privacy & Security → Open Anyway
+
+        **Option 2: ZIP**
+        1. Download `QuickLookIPA-${{ github.ref_name }}-macOS.zip`
+        2. Extract the ZIP file
+        3. Move QuickLookIPA.app to Applications folder
+        4. Launch from Applications
+        5. If macOS blocks the app, go to System Settings → Privacy & Security → Open Anyway
+
+        ### Requirements
+
+        - macOS 14.0 (Sonoma) or later
+        - Apple Silicon (M1/M2/M3) or Intel Mac
+
+        ### Security Note
+
+        This app is not code-signed or notarized. When you first open it, macOS Gatekeeper will block it. To allow the app:
+        1. Try to open the app (it will be blocked)
+        2. Go to System Settings → Privacy & Security
+        3. Scroll down to the Security section
+        4. Click "Open Anyway" next to the QuickLookIPA message
+        5. Click "Open" in the confirmation dialog
+
+        ### Verification
+
+        Verify download integrity using SHA-256 checksums:
+        ```bash
+        shasum -a 256 -c QuickLookIPA-${{ github.ref_name }}-macOS.dmg.sha256
+        # or
+        shasum -a 256 -c QuickLookIPA-${{ github.ref_name }}-macOS.zip.sha256
+        ```
+
+        ### What's Included
+
+        - QuickLookIPA.app - The complete macOS application
+        - SHA-256 checksums for verification
+
+        ### Documentation
+
+        Full documentation available at: https://github.com/sidhantchadha/QuickLookIPA#readme
+
+        ### Changelog
+
+        See [README.md](https://github.com/sidhantchadha/QuickLookIPA#changelog) for detailed changes.
+
+        ---
+
+        **Built with GitHub Actions** | macOS 14 | Xcode 15.2
+        EOF
+
+    - name: Create GitHub Release
+      if: github.ref_type == 'tag'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./artifacts/*
+        body_path: release_notes.md
+        draft: ${{ github.event.inputs.release_type == 'draft' || github.event.inputs.release_type == '' }}
+        prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Release Summary
+      if: github.ref_type == 'tag'
+      run: |
+        echo "## 🚀 Release Created!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Release Type:** ${{ github.event.inputs.release_type || 'draft' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        ls -lh ./artifacts/ | tail -n +2 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Download DMG](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/QuickLookIPA-${{ github.ref_name }}-macOS.dmg)" >> $GITHUB_STEP_SUMMARY

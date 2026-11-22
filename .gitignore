@@ -16,6 +16,13 @@ build/
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.dmg
+*.zip
+
+# CI/CD artifacts
+artifacts/
+dmg-temp/
+release_notes.md
 
 # Swift Package Manager
 .build/
